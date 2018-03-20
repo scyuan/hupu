@@ -3,7 +3,25 @@ var router = express.Router();
 var superagent = require('superagent');
 var cheerio = require('cheerio');
 
+// 判断子节点是否全是span
+function isAllSpan(text, node){
+	var $ = cheerio.load(text);
 
+	//console.log($(node).children().html());
+	var isAll = false;
+
+	if($(node).children().length === 0){
+		return isAll;
+	}else{
+		for(let i = 0; i< $(node).children().length; i++){
+			//console.log($(node).children().eq(i).tagName);
+			if($(node).children().eq(i).get(0).tagName === 'span'){
+				return true;
+			}
+		}
+	}	
+	return isAll;
+}
 // 深度优先搜索算法遍历DOM
 function DFS(text){
 	var $ = cheerio.load(text);
@@ -16,7 +34,7 @@ function DFS(text){
 		for(let i = 0; i < $(element).children().length; i++){
 			var childNode = $(element).children().eq(i);
 			// log.push('第'+(i+1)+'子节点');
-			if($(childNode).children().length !==0){
+			if($(childNode).children().length !==0 && !isAllSpan(text, childNode)){
 				traverse(childNode);
 			}else{
 				//console.log($(childNode).get(0).tagName);
@@ -28,9 +46,31 @@ function DFS(text){
 			}
 		}
 	}
+
 	traverse($('blockquote').get(0));
 	
 	return a;
+
+}
+// 删除诸如来自XXX客户端
+function deleteAppInfo(arr){
+
+	var new_arr = arr;
+
+	var a = arr[arr.length-1];
+	if(a=='发自虎扑iPhone客户端'||a=='发自虎扑Android客户端'||a=='发自手机虎扑 m.hupu.com'){
+		if(arr.length == 2){
+			new_arr = [arr[0]];
+		}else{
+			new_arr = arr.slice(0,arr.length-2);
+		}
+	}
+	return new_arr;
+}
+// 删除用户名
+function deleteUserName(arr) {
+	
+
 
 }
 router.get('/',function(req, res, next){
@@ -172,12 +212,55 @@ router.get('/',function(req, res, next){
 				var user_name = $(floor).find('div.user>div').attr('uname');
 				var time = $(floor).find('div.author>div.left>span.stime').text();
 				var avator_url = $(floor).find('div.user>div img').attr('src');
+				
+				// 我的回复内容
 				var comment_content = [];
-				var aa = $(floor).find('div.floor_box>table.case td').text().split('\n');
-				for(let a of aa){
+
+				// 回复他人
+				var reply = {};
+
+				var all_html = $(floor).find('table.case td').html();
+
+				var other_comment_html = '';
+
+				if($(floor).find('table.case td blockquote').html()){
+					other_comment_html = $('table.case td blockquote').html();
+					other_comment_html = '<blockquote>'+other_comment_html+'</blockquote>';
+					//祛除多余信息
+					reply.comment_content = deleteAppInfo(DFS(other_comment_html));
+					reply.comment_content = deleteUserName(reply.comment_content);
+				}
+
+
+				var my_comment_html = '';
+				if($(floor).find('table.case td>blockquote').html())
+					my_comment_html = all_html.replace(other_comment_html,'');
+				else
+					my_comment_html = all_html;
+
+				my_comment_html = '<blockquote>'+my_comment_html+'</blockquote>';
+
+				//祛除多余信息
+				comment_content = deleteAppInfo(DFS(my_comment_html));
+
+
+				if(comment_content.length==0){
+					var $$ = cheerio.load(my_comment_html);
+
+
+					var aa = $$('blockquote').text().split('\n');
+					for(let a of aa){
 					if(a!==''&&a!=='发自虎扑iPhone客户端'&&a!=='发自虎扑Android客户端'&&a!=='发自手机虎扑 m.hupu.com')
 						comment_content.push(a);
+					}
+					//comment_content.push($(floor).find('div.floor_box>table.case td').text());
 				}
+
+				// var aa = $(floor).find('div.floor_box>table.case td').text().split('\n');
+				// for(let a of aa){
+				// 	if(a!==''&&a!=='发自虎扑iPhone客户端'&&a!=='发自虎扑Android客户端'&&a!=='发自手机虎扑 m.hupu.com')
+				// 		comment_content.push(a);
+				// }
 				//comment_content.push($(floor).find('div.floor_box>table.case td').text());
 
 				comments.push({
@@ -185,7 +268,8 @@ router.get('/',function(req, res, next){
 					user_name:user_name,
 					time:time,
 					avator_url:avator_url,
-					comment_content:comment_content
+					comment_content:comment_content,
+					reply:reply
 				})
 			}
 		})
@@ -196,8 +280,6 @@ router.get('/',function(req, res, next){
 		})
 
 	})
-
-
 
 })
 module.exports = router;
