@@ -4,9 +4,15 @@ var superagent = require('superagent');
 var cheerio = require('cheerio');
 
 /* GET users listing. */
-router.get('/', function(req, res, next) {
+router.post('/', function(req, res, next) {
 
-  var bxj_url = "https://bbs.hupu.com/bxj"
+  console.log(req.body);
+
+  var module = req.body.module;
+  var page = req.body.page;
+
+
+  var bxj_url = "https://m.hupu.com/"+module+"/34-"+page;
 
   superagent.get(bxj_url)
   .end(function(err, sres){
@@ -16,30 +22,32 @@ router.get('/', function(req, res, next) {
 
   	var arr =[];
 
-  	$('.for-list li').each(function(i, elem){
+  	$('.news-list ul li').each(function(i, elem){
   		
-  		var title = $(elem).find('div.titlelink>a').text();
-  		var title_link = bxj_url.replace('/bxj',$(elem).find('div.titlelink>a').attr('href'));
-  		var id = parseInt($(elem).find('div.titlelink>a').attr('href').replace('/','').replace('.html',''));
-  		var author = $(elem).find('div.author>a.aulink').text();
-  		var create_time = $(elem).find('div.author a:last-child').text();
+  		var title = $(elem).find('div.news-txt>h3').text();
+  		var title_link = $(elem).find('a').attr('href');
+  		var author = $(elem).find('div.news-source').text();
+  		var create_time = $(elem).find('div.news-time').text();
   		
-  		var counts = $(elem).find('span.ansour').text().split('/');
-  		var reply_counts = counts[0];
-  		var read_counts =counts[1];
+  		var bright_count = $(elem).find('span.bright-no').text();
+
+  		var reply_counts = bright_count== '' ? $(elem).find('div.news-view > span:nth-child(2)').text():$(elem).find('div.news-view > span:nth-child(4)').text();
+
   		
   		arr.push({
-  			title:title,
-  			id:id,
+  			title:title.replace(/\n/g,''),
   			title_link:title_link,
-  			author:author,
-  			create_time:create_time,
-  			reply_counts:reply_counts.replace(/(^\s*)|(\s*$)/g,''),
-  			read_counts:read_counts.replace(/(^\s*)|(\s*$)/g,'')
+  			author:author.replace(/\n/g,''),
+  			create_time:create_time.replace(/\n/g,''),
+  			reply_counts:reply_counts,
+            bright_count:bright_count == '' ? 0:bright_count
   		})
 
   	})
-  	res.send({code:200,bxj:arr});
+
+    var pages = $('span.page_num').text().replace(/\n/g,'').split('/');
+
+  	res.send({code:200,bxj:arr,currPage:pages[0],totalPage:pages[1]});
   })
 });
 
