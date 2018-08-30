@@ -36,7 +36,7 @@ router.post('/', function(req, res, next) {
   		
   		arr.push({
   			title:title.replace(/\n/g,''),
-  			title_link:title_link,
+  			title_link:'https:'+title_link,
   			author:author.replace(/\n/g,''),
   			create_time:create_time.replace(/\n/g,''),
   			reply_counts:reply_counts,
