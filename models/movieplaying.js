@@ -2,11 +2,18 @@ const Sequelize = require('sequelize');
 const sequelize = require('./index.js');
 
 var movieplaying = sequelize.define('movieplaying',{
+    index:{
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     id:{
         type: Sequelize.STRING,
-        primaryKey:true
     },
     name:{
+        type: Sequelize.STRING
+    },
+    cover:{
         type: Sequelize.STRING
     },
     score:{
@@ -29,9 +36,14 @@ var movieplaying = sequelize.define('movieplaying',{
     },
     vote_count:{
         type: Sequelize.STRING
+    },
+    createdAt:{
+        type:Sequelize.DATE
     }
 }, {
+    engine              : 'InnoDB',
+    charset             : 'utf8',
     timestamps: false
 })
-movieplaying.sync();
+movieplaying.sync({ force:false});
 module.exports = movieplaying;
