@@ -61,4 +61,7 @@ router.get('/coming_movie_list',function (req, res, next) {
 
 // branch_2 test1
 
+// branch_2 test2
+
+
 module.exports = router
